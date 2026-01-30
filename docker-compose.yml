@@ -8,12 +8,12 @@ services:
       - "8080:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-panda-2026-xd}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-Zxd123456789.}
       SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/panda_brain
       MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-panda-2026-xd}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-Zxd123456789.}
       MINIO_BUCKET: ${MINIO_BUCKET:-panda-files}
       PANDA_VECTOR_STORE_TABLE_NAME: ${PANDA_VECTOR_STORE_TABLE_NAME:-vector_store_v3}
       PANDA_VECTOR_STORE_DIMENSION: ${PANDA_VECTOR_STORE_DIMENSION:-2048}
@@ -48,8 +48,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-Panda-2026-xd}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Zxd123456789.}
     volumes:
       - ./data/minio:/data
     command: server /data --console-address ":9001"
@@ -72,8 +72,8 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      POSTGRES_USER: ${POSTGRES_USER:-panda-2026-xd}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Zxd123456789.}
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
     volumes:
       - ./data/postgres:/var/lib/postgresql/data

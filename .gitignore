@@ -45,3 +45,4 @@ data/
 data.txt
 test.png
 *.ps1
+src/main/resources/application-local.yml
