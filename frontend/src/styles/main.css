@@ -1,0 +1,67 @@
+:root {
+  /* Neo-Intelligence Color Palette */
+  --ni-bg-dark: #1a1b26;        /* Deep Blue/Black for Sidebar */
+  --ni-bg-dark-hover: #24283b;  /* Lighter for hover states in sidebar */
+  --ni-bg-light: #f3f4f6;       /* Light Grey for Main Content Background */
+  --ni-bg-white: #ffffff;       /* Pure White for Cards/Panels */
+  
+  --ni-primary: #3b82f6;        /* Vivid Blue for Primary Actions */
+  --ni-primary-rgb: 59, 130, 246; /* RGB for opacity support */
+  --ni-primary-hover: #2563eb;  /* Darker Blue for Hover */
+  --ni-secondary: #64748b;      /* Slate Grey for Secondary Text */
+  
+  --ni-text-main: #1e293b;      /* Dark Slate for Main Text */
+  --ni-text-light: #94a3b8;     /* Light Grey for Muted Text */
+  --ni-text-sidebar: #e2e8f0;   /* Light text for dark sidebar */
+  
+  --ni-border: #e2e8f0;         /* Subtle Border */
+  --ni-border-dark: #334155;    /* Border for dark themes */
+  
+  /* Shadows */
+  --ni-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --ni-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --ni-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  
+  /* Layout */
+  --ni-sidebar-width: 300px;
+  --ni-header-height: 60px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--ni-bg-light);
+  color: var(--ni-text-main);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Dark theme scrollbar for sidebar */
+.dark-scroll ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark-scroll ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}

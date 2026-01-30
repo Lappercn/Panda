@@ -1,0 +1,86 @@
+spring:
+  application:
+    name: panda-mini-brain
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+  # 数据库配置 (PostgreSQL + pgvector)
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+
+  # MongoDB 配置
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/panda_brain
+      auto-index-creation: true
+
+  mail:
+    host: ${PANDA_MAIL_HOST:smtp.163.com}
+    port: ${PANDA_MAIL_PORT:465}
+    username: ${PANDA_MAIL_USERNAME:}
+    password: ${PANDA_MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: ${PANDA_MAIL_SSL_ENABLE:true}
+          starttls:
+            enable: ${PANDA_MAIL_STARTTLS_ENABLE:false}
+            required: ${PANDA_MAIL_STARTTLS_REQUIRED:false}
+
+# LangChain4j 配置 (适配豆包/火山引擎)
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://ark.cn-beijing.volces.com/api/v3/
+      api-key: ${VOLC_API_KEY:}
+      model-name: ep-20260127161013-6bnzh
+      temperature: 0.7
+      log-requests: true
+      log-responses: true
+    streaming-chat-model:
+      base-url: https://ark.cn-beijing.volces.com/api/v3/
+      api-key: ${VOLC_API_KEY:}
+      model-name: ep-20260127095308-s599v
+      temperature: 0.7
+      log-requests: false
+      log-responses: false
+    embedding-model:
+      base-url: https://ark.cn-beijing.volces.com/api/v3/
+      api-key: ${VOLC_API_KEY:}
+      model-name: ep-20260127135051-84fs9
+      log-requests: true
+      log-responses: true
+
+# 自定义配置
+panda:
+  ocr:
+    # Baidu OCR Config
+    baidu:
+      api-key: ${BAIDU_OCR_API_KEY:}
+      secret-key: ${BAIDU_OCR_SECRET_KEY:}
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket-name: ${MINIO_BUCKET:panda-files}
+  vector-store:
+    table-name: vector_store_v3
+    dimension: 2048
+
+  auth:
+    session:
+      cookie-name: PANDA_SESSION
+      ttl-days: 30
+    email-code:
+      ttl-minutes: 10
+      min-send-interval-seconds: 60
+      max-per-hour: 5
