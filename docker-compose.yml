@@ -1,0 +1,80 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: .
+    container_name: panda-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/panda_brain
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-panda-files}
+      PANDA_VECTOR_STORE_TABLE_NAME: ${PANDA_VECTOR_STORE_TABLE_NAME:-vector_store_v3}
+      PANDA_VECTOR_STORE_DIMENSION: ${PANDA_VECTOR_STORE_DIMENSION:-2048}
+      VOLC_API_KEY: ${VOLC_API_KEY}
+      BAIDU_OCR_API_KEY: ${BAIDU_OCR_API_KEY}
+      BAIDU_OCR_SECRET_KEY: ${BAIDU_OCR_SECRET_KEY}
+      PANDA_MAIL_HOST: ${PANDA_MAIL_HOST:-smtp.163.com}
+      PANDA_MAIL_PORT: ${PANDA_MAIL_PORT:-465}
+      PANDA_MAIL_USERNAME: ${PANDA_MAIL_USERNAME}
+      PANDA_MAIL_PASSWORD: ${PANDA_MAIL_PASSWORD}
+    depends_on:
+      - mongodb
+      - postgres
+      - minio
+    restart: always
+
+  web:
+    build:
+      context: ./frontend
+    container_name: panda-web
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    restart: always
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: panda-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - ./data/minio:/data
+    command: server /data --console-address ":9001"
+    restart: always
+
+  # MongoDB (Metadata)
+  mongodb:
+    image: mongo:latest
+    container_name: panda-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongo:/data/db
+    restart: always
+
+  # PostgreSQL + pgvector (Vector Store)
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: panda-pgvector
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    restart: always
