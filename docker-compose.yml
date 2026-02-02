@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   app:
     build:
@@ -25,9 +24,12 @@ services:
       PANDA_MAIL_USERNAME: ${PANDA_MAIL_USERNAME}
       PANDA_MAIL_PASSWORD: ${PANDA_MAIL_PASSWORD}
     depends_on:
-      - mongodb
-      - postgres
-      - minio
+      mongodb:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     restart: always
 
   web:
@@ -48,11 +50,16 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-Panda-2026-xd}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-panda-2026-xd}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Zxd123456789.}
     volumes:
       - ./data/minio:/data
     command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
     restart: always
 
   # MongoDB (Metadata)
@@ -63,6 +70,11 @@ services:
       - "27017:27017"
     volumes:
       - ./data/mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
     restart: always
 
   # PostgreSQL + pgvector (Vector Store)
@@ -77,4 +89,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
     restart: always
