@@ -21,6 +21,11 @@ service.interceptors.request.use(
     if (userStore.userId) {
       config.headers['X-User-ID'] = userStore.userId
     }
+    const url = new URL(window.location.href)
+    const shareToken = url.searchParams.get('shareToken')
+    if (shareToken) {
+      config.headers['X-Share-Token'] = shareToken
+    }
     return config
   },
   error => {

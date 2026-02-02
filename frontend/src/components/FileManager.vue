@@ -1,19 +1,20 @@
 <template>
   <div class="file-manager">
     <div class="toolbar">
-      <el-button type="primary" class="upload-btn" :icon="Upload" @click="triggerUpload">上传文件</el-button>
+      <el-button v-if="!readOnly" type="primary" class="upload-btn" :icon="Upload" @click="triggerUpload">上传文件</el-button>
       <div class="action-buttons">
-        <el-tooltip content="移动选中项">
+        <el-tooltip v-if="!readOnly" content="移动选中项">
           <el-button circle :icon="Rank" size="small" :disabled="selectedIds.length === 0" @click="openMoveDialogForSelected" />
         </el-tooltip>
-        <el-tooltip content="新建文件夹">
+        <el-tooltip v-if="!readOnly" content="新建文件夹">
           <el-button circle :icon="FolderAdd" size="small" @click="showMkdirDialog" />
         </el-tooltip>
         <el-tooltip content="刷新">
           <el-button circle :icon="Refresh" size="small" @click="refresh" />
         </el-tooltip>
       </div>
-      <input 
+      <input
+        v-if="!readOnly"
         type="file" 
         ref="fileInput" 
         style="display: none" 
@@ -52,14 +53,14 @@
         class="file-item"
         :class="{ selected: isSelected(file.id), 'drag-over': dragOverId === file.id }"
         @click="handleItemClick(file)"
-        draggable="true"
+        :draggable="!readOnly"
         @dragstart="onDragStart($event, file)"
         @dragend="onDragEnd"
         @dragover.prevent="onDragOver($event, file)"
         @dragleave="onDragLeave"
         @drop.prevent="onDrop($event, file)"
       >
-        <div class="file-select" @click.stop>
+        <div v-if="!readOnly" class="file-select" @click.stop>
           <el-checkbox :model-value="isSelected(file.id)" @change="(v) => setSelected(file.id, v)" />
         </div>
         <div class="file-icon">
@@ -83,7 +84,7 @@
           </div>
         </div>
         
-        <div class="file-actions">
+        <div v-if="!readOnly" class="file-actions">
           <el-dropdown trigger="click" @command="(cmd) => handleCommand(cmd, file)">
             <span class="el-dropdown-link" @click.stop>
               <el-icon><MoreFilled /></el-icon>
@@ -102,7 +103,7 @@
     </div>
 
     <!-- Dialogs -->
-    <el-dialog v-model="mkdirVisible" title="新建文件夹" width="300px">
+    <el-dialog v-if="!readOnly" v-model="mkdirVisible" title="新建文件夹" width="300px">
       <el-input v-model="newDirName" placeholder="请输入文件夹名称" @keyup.enter="handleMkdir" />
       <template #footer>
         <el-button @click="mkdirVisible = false">取消</el-button>
@@ -110,7 +111,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="moveVisible" title="移动到..." width="300px">
+    <el-dialog v-if="!readOnly" v-model="moveVisible" title="移动到..." width="300px">
       <div class="move-tree">
         <el-tree
           ref="moveTreeRef"
@@ -138,12 +139,14 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { Upload, FolderAdd, Refresh, Folder, Document, HomeFilled, MoreFilled, Loading, CircleCheckFilled, WarningFilled, Rank } from '@element-plus/icons-vue'
 import { listDirectory, createDirectory, uploadFile, deleteNode, getDownloadUrl, moveNode, getPreviewData, retryProcess } from '../api/fs'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useUserStore } from '../stores/user'
 import dayjs from 'dayjs'
 
 const emit = defineEmits(['preview-file'])
 
-const userStore = useUserStore()
+defineProps({
+  readOnly: { type: Boolean, default: false }
+})
+
 const loading = ref(false)
 const fileList = ref([])
 const currentParentId = ref('0')

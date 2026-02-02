@@ -136,7 +136,12 @@ public class MinioService {
                             .build()
             );
         } catch (Exception e) {
-            throw new RuntimeException("MinIO Get URL Failed", e);
+            log.error("MinIO presign failed, bucket={}, objectName={}, expirySeconds={}", bucketName, objectName, expirySeconds, e);
+            String msg = e.getMessage();
+            if (msg == null || msg.isBlank()) {
+                throw new RuntimeException("MinIO Get URL Failed", e);
+            }
+            throw new RuntimeException("MinIO Get URL Failed: " + msg, e);
         }
     }
 }

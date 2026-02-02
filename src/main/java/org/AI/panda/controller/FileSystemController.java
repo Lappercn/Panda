@@ -4,6 +4,8 @@ import org.AI.panda.common.Result;
 import org.AI.panda.model.entity.FileSystemNode;
 import org.AI.panda.service.FileSystemService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,9 +27,6 @@ public class FileSystemController {
     public Result<List<FileSystemNode>> list(@RequestHeader(value = "X-User-ID", required = false) String userId,
                                              HttpServletRequest request,
                                              @RequestParam(required = false, defaultValue = "0") String parentId) {
-        if (UserIdResolver.isVisitor(request)) {
-            return Result.error(403, "只读分享链接不支持文件访问");
-        }
         return Result.success(fileSystemService.listDirectory(UserIdResolver.resolve(request, userId), parentId));
     }
 
@@ -121,10 +120,20 @@ public class FileSystemController {
     public Result<java.util.Map<String, String>> preview(@RequestHeader(value = "X-User-ID", required = false) String userId,
                                                          HttpServletRequest request,
                                                          @RequestParam String nodeId) {
-        if (UserIdResolver.isVisitor(request)) {
-            return Result.error(403, "只读分享链接不支持文件访问");
-        }
-        return Result.success(fileSystemService.getPreviewData(UserIdResolver.resolve(request, userId), nodeId));
+        boolean includeFileUrl = !UserIdResolver.isVisitor(request);
+        return Result.success(fileSystemService.getPreviewData(UserIdResolver.resolve(request, userId), nodeId, includeFileUrl));
+    }
+
+    @GetMapping(value = "/ocr", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<byte[]> ocr(@RequestHeader(value = "X-User-ID", required = false) String userId,
+                                      HttpServletRequest request,
+                                      @RequestParam String nodeId) {
+        String uid = UserIdResolver.resolve(request, userId);
+        byte[] bytes = fileSystemService.readOcrJsonBytes(uid, nodeId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Cache-Control", "no-store")
+                .body(bytes);
     }
 
     @PostMapping("/retry")

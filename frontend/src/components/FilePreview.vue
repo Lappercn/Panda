@@ -4,7 +4,7 @@
       <span class="file-name">{{ fileName }}</span>
       <div class="actions">
         <template v-if="!isEditing">
-            <el-button type="primary" link :icon="Edit" @click="toggleEdit">编辑</el-button>
+            <el-button v-if="!readOnly" type="primary" link :icon="Edit" @click="toggleEdit">编辑</el-button>
             <el-button type="primary" link @click="zoomIn">放大</el-button>
             <el-button type="primary" link @click="zoomOut">缩小</el-button>
             <el-button type="info" link @click="resetView">重置</el-button>
@@ -69,7 +69,8 @@ const props = defineProps({
   nodeId: String,
   fileName: String,
   ocrUrl: String,
-  fileUrl: String
+  fileUrl: String,
+  readOnly: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['close'])
@@ -97,11 +98,13 @@ watch(() => props.ocrUrl, () => {
 })
 
 const toggleEdit = () => {
+    if (props.readOnly) return
     originalPages.value = JSON.parse(JSON.stringify(pages.value))
     isEditing.value = true
 }
 
 const handleDoubleClick = () => {
+  if (props.readOnly) return
   if (!isEditing.value) {
     toggleEdit()
   }
@@ -113,6 +116,7 @@ const cancelEdit = () => {
 }
 
 const handleSave = async () => {
+    if (props.readOnly) return
     if (!props.nodeId) {
         ElMessage.error('无法保存：缺少文件ID')
         return
@@ -206,7 +210,16 @@ const loadOcrData = async () => {
   
   try {
     const isPresigned = props.ocrUrl.includes('X-Amz-Signature=') || props.ocrUrl.includes('X-Amz-Algorithm=')
-    const url = isPresigned ? props.ocrUrl : (props.ocrUrl + (props.ocrUrl.includes('?') ? '&' : '?') + 't=' + Date.now())
+    let url = props.ocrUrl
+    if (!isPresigned) {
+      const u = new URL(url, window.location.origin)
+      u.searchParams.set('t', String(Date.now()))
+      const shareToken = new URL(window.location.href).searchParams.get('shareToken')
+      if (shareToken && !u.searchParams.has('shareToken')) {
+        u.searchParams.set('shareToken', shareToken)
+      }
+      url = u.toString()
+    }
     const res = await fetch(url, { cache: 'no-store' })
     const text = await res.text()
     let json

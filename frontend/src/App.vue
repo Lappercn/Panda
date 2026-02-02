@@ -5,8 +5,27 @@
   </div>
 
   <el-container v-else-if="shareMode" class="share-container">
+    <el-aside width="300px" class="share-sidebar">
+      <div class="sidebar-header">
+        <div class="logo">🐼 Panda 知识库</div>
+      </div>
+      <div class="sidebar-content">
+        <FileManager :key="shareToken" read-only @preview-file="handlePreview" />
+      </div>
+    </el-aside>
     <el-main class="share-main">
-      <ChatWindow :key="shareToken" :share-token="shareToken" />
+      <div class="content-wrapper">
+        <FilePreview
+          v-if="showPreview"
+          :node-id="previewFile.nodeId"
+          :file-name="previewFile.name"
+          :ocr-url="previewFile.ocrUrl"
+          :file-url="previewFile.fileUrl"
+          read-only
+          @close="handleClosePreview"
+        />
+        <ChatWindow v-else :key="shareToken" :share-token="shareToken" />
+      </div>
     </el-main>
   </el-container>
 
@@ -198,6 +217,14 @@ const handleClosePreview = () => {
   height: 100vh;
   width: 100vw;
   background-color: var(--ni-bg-light);
+}
+
+.share-sidebar {
+  background-color: var(--ni-bg-dark);
+  border-right: 1px solid var(--ni-bg-dark);
+  display: flex;
+  flex-direction: column;
+  color: var(--ni-text-sidebar);
 }
 
 .share-main {
