@@ -55,24 +55,20 @@ public class RagService {
                 : chatId;
         String sessionId = (effectiveChatId == null || effectiveChatId.isBlank()) ? "default" : effectiveChatId;
 
-        // 0. 保存用户问题到记忆 (Vectorization happens async)
-        chatMemoryService.saveMessage(userId, sessionId, "user", question);
+        if (!isVisitor) {
+            chatMemoryService.saveMessage(userId, sessionId, "user", question);
+        }
 
         Sinks.Many<String> sink = Sinks.many().unicast().onBackpressureBuffer();
 
-        // 0.1 Check and perform memory compression if needed
-        if (chatMemoryService.isCompressionNeeded(userId, sessionId)) {
-            // Emit compression start signal
+        if (!isVisitor && chatMemoryService.isCompressionNeeded(userId, sessionId)) {
             sink.tryEmitNext("[MEMORY_COMPRESSING]");
-            
-            // Perform compression synchronously
+
             try {
                 chatMemoryService.compressMemorySync(userId, sessionId);
-                // Emit compression end signal
                 sink.tryEmitNext("[MEMORY_COMPRESSED]");
             } catch (Throwable e) {
                 System.err.println("Compression failed: " + e.getMessage());
-                // Continue anyway, just log error
             }
         }
 
@@ -164,7 +160,9 @@ public class RagService {
             .onComplete(response -> {
                 // Agent 完整回答结束后，保存到记忆
                 // 注意：ToolExecution 期间不会触发 onNext，只有最终 LLM 回复时触发
-                chatMemoryService.saveMessage(userId, sessionId, "assistant", fullResponse.toString());
+                if (!isVisitor) {
+                    chatMemoryService.saveMessage(userId, sessionId, "assistant", fullResponse.toString());
+                }
                 sink.tryEmitNext("[DONE]");
                 sink.tryEmitComplete();
             })
@@ -231,7 +229,9 @@ public class RagService {
 
                             @Override
                             public void onComplete(Response<AiMessage> response) {
-                                chatMemoryService.saveMessage(userId, sessionId, "assistant", streamed.toString());
+                                if (!isVisitor) {
+                                    chatMemoryService.saveMessage(userId, sessionId, "assistant", streamed.toString());
+                                }
                                 sink.tryEmitNext("[DONE]");
                                 sink.tryEmitComplete();
                             }

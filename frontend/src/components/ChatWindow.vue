@@ -18,16 +18,30 @@
           新对话
         </el-button>
         <el-button size="small" plain :icon="ChatLineRound" @click="sessionsDrawerOpen = true">会话</el-button>
-        <el-button
+        <el-dropdown
           v-if="!isShareMode"
-          size="small"
-          plain
-          :icon="Share"
+          trigger="click"
+          placement="bottom-end"
           :disabled="!currentSessionId || loading"
-          @click="handleShare"
+          @command="handleShareCommand"
         >
-          分享
-        </el-button>
+          <el-button
+            size="small"
+            class="share-btn"
+            :icon="Share"
+            :disabled="!currentSessionId || loading"
+          >
+            分享
+            <el-icon class="share-btn-caret"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :command="0">永久分享</el-dropdown-item>
+              <el-dropdown-item :command="7">7 天有效</el-dropdown-item>
+              <el-dropdown-item :command="30">30 天有效</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-tag v-if="loading" size="small" effect="plain" type="info">生成中...</el-tag>
       </div>
     </div>
@@ -130,7 +144,7 @@
 
 <script setup>
 import { ref, nextTick, onBeforeUnmount, onMounted, computed } from 'vue'
-import { Service, Loading, Position, Plus, ChatLineRound, Share } from '@element-plus/icons-vue'
+import { Service, Loading, Position, Plus, ChatLineRound, Share, ArrowDown } from '@element-plus/icons-vue'
 import { useUserStore } from '../stores/user'
 import { marked } from 'marked'
 import mermaid from 'mermaid'
@@ -295,15 +309,10 @@ const handleNewSession = async () => {
   await selectSession(s)
 }
 
-const handleShare = async () => {
+const handleShareCommand = async (ttlDays) => {
   if (!currentSessionId.value) return
-  const raw = window.prompt('分享有效期：输入 0=永久，7=7天，30=30天', '30')
-  if (raw == null) return
-  const ttlDays = Number.parseInt(raw, 10)
-  if (![0, 7, 30].includes(ttlDays)) {
-    ElMessage.warning('仅支持 0/7/30')
-    return
-  }
+  if (![0, 7, 30].includes(ttlDays)) return
+
   const res = await createChatShare(currentSessionId.value, ttlDays)
   const token = res?.data?.shareToken
   if (!token) return
@@ -332,6 +341,7 @@ const sendMessage = async () => {
   if (!text || loading.value) return
 
   await ensureSessionReady()
+  stopStreaming()
 
   // 1. Add User Message
   messages.value.push({ role: 'user', content: text })
@@ -352,7 +362,6 @@ const sendMessage = async () => {
   if (props.shareToken) qs.set('shareToken', props.shareToken)
   const url = `/ai/rag/chat?${qs.toString()}`
 
-  stopStreaming()
   const eventSource = new EventSource(url)
   activeEventSource.value = eventSource
   
@@ -534,6 +543,30 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.share-btn {
+  border-radius: 999px;
+  padding: 0 14px;
+  height: 32px;
+  border: 1px solid rgba(var(--ni-primary-rgb), 0.25);
+  background: linear-gradient(135deg, rgba(var(--ni-primary-rgb), 0.10), rgba(var(--ni-primary-rgb), 0.04));
+  color: var(--ni-primary);
+  transition: all 0.15s ease;
+}
+
+.share-btn:hover {
+  border-color: rgba(var(--ni-primary-rgb), 0.45);
+  background: linear-gradient(135deg, rgba(var(--ni-primary-rgb), 0.16), rgba(var(--ni-primary-rgb), 0.06));
+  transform: translateY(-1px);
+}
+
+.share-btn:active {
+  transform: translateY(0);
+}
+
+.share-btn-caret {
+  margin-left: 4px;
 }
 
 .sessions-drawer-header {

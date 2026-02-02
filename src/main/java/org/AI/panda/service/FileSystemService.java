@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -280,6 +282,10 @@ public class FileSystemService {
     }
 
     public java.util.Map<String, String> getPreviewData(String userId, String nodeId) {
+        return getPreviewData(userId, nodeId, true);
+    }
+
+    public java.util.Map<String, String> getPreviewData(String userId, String nodeId, boolean includeFileUrl) {
         FileSystemNode node = fsRepository.findById(nodeId)
                 .orElseThrow(() -> new IllegalArgumentException("Node not found"));
 
@@ -289,18 +295,41 @@ public class FileSystemService {
 
         java.util.Map<String, String> result = new java.util.HashMap<>();
         // Original File URL
-        if (node.getMinioObjectName() != null) {
-            result.put("fileUrl", minioService.getPresignedUrl(node.getMinioObjectName(), 3600));
+        if (includeFileUrl && node.getMinioObjectName() != null) {
+            try {
+                result.put("fileUrl", minioService.getPresignedUrl(node.getMinioObjectName(), 3600));
+            } catch (RuntimeException ignored) {
+            }
         }
 
         // OCR JSON URL
         if (node.getOcrResultPath() != null) {
-            result.put("ocrUrl", minioService.getPresignedUrl(node.getOcrResultPath(), 3600));
+            result.put("ocrUrl", "/api/fs/ocr?nodeId=" + java.net.URLEncoder.encode(nodeId, java.nio.charset.StandardCharsets.UTF_8));
         }
 
         result.put("name", node.getName());
         result.put("contentType", node.getContentType());
 
         return result;
+    }
+
+    public byte[] readOcrJsonBytes(String userId, String nodeId) {
+        FileSystemNode node = fsRepository.findById(nodeId)
+                .orElseThrow(() -> new IllegalArgumentException("Node not found"));
+
+        if (!node.getUserId().equals(userId)) {
+            throw new SecurityException("Access denied");
+        }
+
+        String ocrPath = node.getOcrResultPath();
+        if (ocrPath == null || ocrPath.isBlank()) {
+            return "{\"pages\":[]}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        }
+
+        try (InputStream is = minioService.getFile(ocrPath)) {
+            return is.readAllBytes();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read OCR result", e);
+        }
     }
 }
