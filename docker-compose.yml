@@ -38,6 +38,9 @@ services:
     container_name: panda-web
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - /opt/panda/tongzhilian.cn_nginx:/etc/nginx/ssl:ro
     depends_on:
       - app
     restart: always
