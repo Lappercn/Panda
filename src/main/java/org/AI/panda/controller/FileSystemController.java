@@ -135,16 +135,37 @@ public class FileSystemController {
         // System.out.println("OCR Request: nodeId=" + nodeId + ", userIdHeader=" + userId + ", resolvedUid=" + uid);
         
         try {
+            // 如果是分享访问，允许读取
+            // 但 fileSystemService.readOcrJsonBytes 会严格校验 uid == node.userId
+            // 正常情况下，UserIdResolver 已经把 uid 解析为 ownerId
+            // 如果还是报错，说明 UserIdResolver 没解析对，或者文件不属于该 owner
+            
+            // 为了更稳健，我们这里可以做一个特殊的处理：
+            // 如果是分享访问 (isVisitor=true)，我们直接获取文件节点，并临时允许读取 (跳过 Service 层的严格校验)
+            // 或者，我们在 Service 层增加一个 allowShare 的参数
+            
+            // 方案二：直接在 Controller 层处理分享逻辑
+            if (UserIdResolver.isVisitor(request)) {
+                // 验证分享 Token 是否有效（Filter 已验证）
+                // 验证该文件是否属于分享的 owner
+                // 这里我们直接调用 Service 的内部方法或者新增一个 permissive 方法
+                // 但 Service 层通常不暴露内部方法。
+                
+                // 最好的办法是：UserIdResolver 已经把 uid 变成了 ownerId。
+                // 如果还报错，说明文件真的不是这个 owner 的。
+                // 或者是 UserIdResolver 解析出的 ownerId 和文件实际 ownerId 不一致。
+                
+                // 让我们尝试捕获异常，并再次尝试（比如直接用文件的 ownerId 读取，但这有安全风险）
+                // 安全的做法：相信 UserIdResolver。如果报错，就是 403。
+            }
+            
             byte[] bytes = fileSystemService.readOcrJsonBytes(uid, nodeId);
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_JSON)
                     .header("Cache-Control", "no-store")
                     .body(bytes);
         } catch (SecurityException e) {
-            // 如果是 SecurityException，尝试放宽策略：如果是访客模式且正在访问分享的会话关联的文件？
-            // 目前架构上文件和会话没有强关联，只有 Owner 关联。
-            // 如果 UserIdResolver 解析正确，uid 应该是 OwnerId，应该能过。
-            // 如果没过，说明 UserIdResolver 没解析出 OwnerId，或者文件不属于该 Owner。
+            // 403 Access denied
             return ResponseEntity.status(403).build();
         }
     }

@@ -318,20 +318,14 @@ public class FileSystemService {
                 .orElseThrow(() -> new IllegalArgumentException("Node not found"));
 
         if (!node.getUserId().equals(userId)) {
-             // 如果 userId 不匹配，检查是否是分享链接访问（即当前 userId 是分享者）
-             // 但这里 FileSystemService 不知道是否是分享访问。
-             // 实际上，Controller 层传入的 userId 已经被 UserIdResolver.resolve 处理过了：
-             // 如果是分享访问，传入的就是分享者ID (ownerUserId)。
-             // 所以如果这里还不相等，说明：
-             // 1. 真的无权访问
-             // 2. 或者分享链接 resolve 逻辑有问题
+             // 再次检查：也许 userId 格式不对？或者数据库里存的是 ObjectId 而不是 String？
+             // 不，都是 String。
+             // 唯一的可能是：分享链接的 ownerId 和这个文件的 ownerId 不一致。
+             // 比如：A 分享了一个会话，会话里引用了 B 的文件？
+             // 或者：文件系统的结构错乱了。
              
-             // 考虑到分享场景下，UserIdResolver 已经把 userId 解析为 ownerUserId，
-             // 所以理论上 node.getUserId().equals(userId) 应该是 true。
-             // 如果报错 Access denied，说明传入的 userId 和 node.userId 不一致。
-             
-             // 唯一的例外：如果是管理员或者有特殊逻辑？暂无。
-             // 让我们打印一下日志以便排查，但先抛出异常
+             // 暂时放宽策略：如果 userId 不匹配，但文件是公开的？不支持公开。
+             // 只能是：抛出异常，让 Controller 处理 403
              throw new SecurityException("Access denied: nodeUser=" + node.getUserId() + ", requestUser=" + userId);
         }
 
