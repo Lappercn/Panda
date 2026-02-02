@@ -128,12 +128,25 @@ public class FileSystemController {
     public ResponseEntity<byte[]> ocr(@RequestHeader(value = "X-User-ID", required = false) String userId,
                                       HttpServletRequest request,
                                       @RequestParam String nodeId) {
+        // 优先解析分享 Token (如果存在)
         String uid = UserIdResolver.resolve(request, userId);
-        byte[] bytes = fileSystemService.readOcrJsonBytes(uid, nodeId);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("Cache-Control", "no-store")
-                .body(bytes);
+        
+        // 调试日志
+        // System.out.println("OCR Request: nodeId=" + nodeId + ", userIdHeader=" + userId + ", resolvedUid=" + uid);
+        
+        try {
+            byte[] bytes = fileSystemService.readOcrJsonBytes(uid, nodeId);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Cache-Control", "no-store")
+                    .body(bytes);
+        } catch (SecurityException e) {
+            // 如果是 SecurityException，尝试放宽策略：如果是访客模式且正在访问分享的会话关联的文件？
+            // 目前架构上文件和会话没有强关联，只有 Owner 关联。
+            // 如果 UserIdResolver 解析正确，uid 应该是 OwnerId，应该能过。
+            // 如果没过，说明 UserIdResolver 没解析出 OwnerId，或者文件不属于该 Owner。
+            return ResponseEntity.status(403).build();
+        }
     }
 
     @PostMapping("/retry")
