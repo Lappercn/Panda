@@ -27,10 +27,13 @@ export function getChatMessages(sessionId, limit = 50, shareToken = '') {
   })
 }
 
-export function createChatShare(sessionId) {
+export function createChatShare(sessionId, ttlDays) {
+  const params = {}
+  if (typeof ttlDays === 'number') params.ttlDays = ttlDays
   return request({
     url: `/api/chat/sessions/${encodeURIComponent(sessionId)}/share`,
-    method: 'post'
+    method: 'post',
+    params
   })
 }
 

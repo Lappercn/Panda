@@ -4,7 +4,7 @@
       <div class="chat-title">
         <el-icon><Service /></el-icon>
         <span>{{ headerTitle }}</span>
-        <el-tag v-if="isShareMode" size="small" effect="plain" type="warning">只读分享</el-tag>
+        <el-tag v-if="isShareMode" size="small" effect="plain" type="warning">分享会话</el-tag>
       </div>
       <div class="chat-header-actions">
         <el-button
@@ -74,7 +74,7 @@
           v-model="input"
           type="textarea"
           :autosize="{ minRows: 1, maxRows: 6 }"
-          placeholder="基于知识库向我提问..."
+          :placeholder="isShareMode ? '在分享会话中继续提问...' : '基于知识库向我提问...'"
           @keydown.enter.prevent="sendMessage"
           :disabled="loading"
           class="chat-input"
@@ -100,7 +100,7 @@
            />
         </div>
       </div>
-      <div class="footer-note">内容由 AI 生成，可能存在误差，请核实。</div>
+      <div class="footer-note">{{ isShareMode ? '分享模式：可继续问答，不支持文件管理操作。' : '内容由 AI 生成，可能存在误差，请核实。' }}</div>
     </div>
 
     <el-drawer v-model="sessionsDrawerOpen" size="320px" append-to-body>
@@ -297,13 +297,20 @@ const handleNewSession = async () => {
 
 const handleShare = async () => {
   if (!currentSessionId.value) return
-  const res = await createChatShare(currentSessionId.value)
+  const raw = window.prompt('分享有效期：输入 0=永久，7=7天，30=30天', '30')
+  if (raw == null) return
+  const ttlDays = Number.parseInt(raw, 10)
+  if (![0, 7, 30].includes(ttlDays)) {
+    ElMessage.warning('仅支持 0/7/30')
+    return
+  }
+  const res = await createChatShare(currentSessionId.value, ttlDays)
   const token = res?.data?.shareToken
   if (!token) return
   const url = `${window.location.origin}${window.location.pathname}?shareToken=${encodeURIComponent(token)}`
   try {
     await navigator.clipboard.writeText(url)
-    ElMessage.success('分享链接已复制')
+    ElMessage.success(`分享链接已复制（有效期：${ttlDays === 0 ? '永久' : `${ttlDays}天`}）`)
   } catch {
     window.prompt('复制分享链接', url)
   }
@@ -444,16 +451,23 @@ const sendMessage = async () => {
 onMounted(() => {
   const init = async () => {
     if (isShareMode.value) {
-      const resolved = await resolveChatShare(props.shareToken)
-      const sessionId = resolved?.data?.sessionId || ''
-      const title = resolved?.data?.title || ''
-      sessions.value = sessionId ? [{ id: sessionId, title }] : []
-      currentSessionId.value = sessionId
-      currentSessionTitle.value = title || '对话'
-      if (sessionId) {
-        await loadSessionMessages(sessionId)
-      } else {
-        messages.value = baseGreeting()
+      try {
+        const resolved = await resolveChatShare(props.shareToken)
+        const sessionId = resolved?.data?.sessionId || ''
+        const title = resolved?.data?.title || ''
+        sessions.value = sessionId ? [{ id: sessionId, title }] : []
+        currentSessionId.value = sessionId
+        currentSessionTitle.value = title || '对话'
+        if (sessionId) {
+          await loadSessionMessages(sessionId)
+        } else {
+          messages.value = baseGreeting()
+        }
+      } catch {
+        sessions.value = []
+        currentSessionId.value = ''
+        currentSessionTitle.value = '分享已失效'
+        messages.value = [{ role: 'bot', content: '❌ 分享链接无效或已过期。' }]
       }
       return
     }

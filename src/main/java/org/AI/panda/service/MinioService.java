@@ -4,6 +4,7 @@ import io.minio.*;
 import io.minio.http.Method;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +18,10 @@ public class MinioService {
 
     @Autowired
     private MinioClient minioClient;
+
+    @Autowired
+    @Qualifier("minioPresignClient")
+    private MinioClient minioPresignClient;
 
     @Value("${panda.minio.bucket-name}")
     private String bucketName;
@@ -122,7 +127,7 @@ public class MinioService {
      */
     public String getPresignedUrl(String objectName, int expirySeconds) {
         try {
-            return minioClient.getPresignedObjectUrl(
+            return minioPresignClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
                             .bucket(bucketName)
