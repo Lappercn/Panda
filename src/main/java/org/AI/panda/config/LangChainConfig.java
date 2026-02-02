@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import java.time.Duration;
+import java.net.URI;
 
 @Configuration
 public class LangChainConfig {
@@ -60,15 +61,29 @@ public class LangChainConfig {
     public EmbeddingStore<TextSegment> embeddingStore(
             @Value("${panda.vector-store.table-name}") String tableName,
             @Value("${panda.vector-store.dimension}") int dimension,
+            @Value("${spring.datasource.url}") String jdbcUrl,
             @Value("${spring.datasource.username}") String username,
             @Value("${spring.datasource.password}") String password) {
-        
-        // 假设本地运行，硬编码 host/port/db，实际生产应解析 jdbc url
-    
+
+        String host = "localhost";
+        int port = 5432;
+        String database = "postgres";
+        try {
+            String uriString = jdbcUrl != null && jdbcUrl.startsWith("jdbc:") ? jdbcUrl.substring(5) : jdbcUrl;
+            if (uriString != null) {
+                URI uri = URI.create(uriString);
+                if (uri.getHost() != null && !uri.getHost().isBlank()) host = uri.getHost();
+                if (uri.getPort() > 0) port = uri.getPort();
+                String path = uri.getPath();
+                if (path != null && path.length() > 1) database = path.substring(1);
+            }
+        } catch (Exception ignored) {
+        }
+
         return PgVectorEmbeddingStore.builder()
-                .host("localhost")
-                .port(5432)
-                .database("postgres")
+                .host(host)
+                .port(port)
+                .database(database)
                 .user(username)
                 .password(password)
                 .table(tableName)
