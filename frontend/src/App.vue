@@ -130,13 +130,12 @@ watchEffect(() => {
 const initAuth = async () => {
   const url = new URL(window.location.href)
   shareToken.value = url.searchParams.get('shareToken') || ''
+  shareMode.value = !!shareToken.value
   try {
     const res = await getMe()
     userStore.setUser(res.data)
-    shareMode.value = false
   } catch {
     userStore.clearUser()
-    shareMode.value = !!shareToken.value
   } finally {
     initializing.value = false
   }

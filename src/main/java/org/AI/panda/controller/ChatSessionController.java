@@ -74,6 +74,7 @@ public class ChatSessionController {
 
     @PostMapping("/sessions/{sessionId}/share")
     public Result<Map<String, String>> createShare(@PathVariable String sessionId,
+                                                   @RequestParam(required = false) Integer ttlDays,
                                                    @RequestHeader(value = "X-User-ID", required = false) String userId,
                                                    HttpServletRequest request) {
         if (UserIdResolver.isVisitor(request)) {
@@ -85,7 +86,7 @@ public class ChatSessionController {
         if (session == null) {
             return Result.error(404, "会话不存在");
         }
-        String token = shareLinkService.createChatShare(uid, sid);
+        String token = shareLinkService.createChatShare(uid, sid, ttlDays);
         return Result.success(Map.of("shareToken", token));
     }
 

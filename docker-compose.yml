@@ -11,6 +11,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-Zxd123456789.}
       SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/panda_brain
       MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-https://api.tongzhilian.cn}
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-panda-2026-xd}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-Zxd123456789.}
       MINIO_BUCKET: ${MINIO_BUCKET:-panda-files}

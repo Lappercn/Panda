@@ -29,7 +29,7 @@ public class ShareLinkService {
         this.shareLinkRepository = shareLinkRepository;
     }
 
-    public String createChatShare(String ownerUserId, String sessionId) {
+    public String createChatShare(String ownerUserId, String sessionId, Integer ttlDaysOverride) {
         if (ownerUserId == null || ownerUserId.isBlank()) {
             throw new IllegalArgumentException("ownerUserId 不能为空");
         }
@@ -41,12 +41,17 @@ public class ShareLinkService {
         String tokenHash = HashUtil.sha256Hex(token);
 
         Date now = new Date();
+        int effectiveTtlDays = normalizeTtlDays(ttlDaysOverride);
         ShareLink link = new ShareLink();
         link.setOwnerUserId(ownerUserId);
         link.setSessionId(sessionId);
         link.setTokenHash(tokenHash);
         link.setCreatedAt(now);
-        link.setExpiresAt(new Date(now.getTime() + Duration.ofDays(ttlDays).toMillis()));
+        if (effectiveTtlDays > 0) {
+            link.setExpiresAt(new Date(now.getTime() + Duration.ofDays(effectiveTtlDays).toMillis()));
+        } else {
+            link.setExpiresAt(null);
+        }
 
         shareLinkRepository.save(link);
         return token;
@@ -68,5 +73,11 @@ public class ShareLinkService {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         return HexFormat.of().formatHex(bytes);
+    }
+
+    private int normalizeTtlDays(Integer ttlDaysOverride) {
+        if (ttlDaysOverride == null) return Math.max(0, ttlDays);
+        if (ttlDaysOverride <= 0) return 0;
+        return Math.min(ttlDaysOverride, 3650);
     }
 }
