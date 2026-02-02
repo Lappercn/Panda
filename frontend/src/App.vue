@@ -51,7 +51,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watchEffect } from 'vue'
 import { useUserStore } from './stores/user'
 import FileManager from './components/FileManager.vue'
 import ChatWindow from './components/ChatWindow.vue'
@@ -68,6 +68,64 @@ const shareToken = ref('')
 
 const showPreview = ref(false)
 const previewFile = ref({})
+
+const BASE_SITE_URL = 'https://tongzhilian.cn/'
+const DEFAULT_TITLE = 'Panda 知识库'
+const DEFAULT_DESCRIPTION = 'Panda 知识库：OCR 识别、AI 对话与文件管理。'
+
+const setMetaByName = (name, content) => {
+  const head = document.head
+  if (!head) return
+  let el = document.querySelector(`meta[name="${name}"]`)
+  if (!el) {
+    el = document.createElement('meta')
+    el.setAttribute('name', name)
+    head.appendChild(el)
+  }
+  el.setAttribute('content', content)
+}
+
+const setMetaByProperty = (property, content) => {
+  const head = document.head
+  if (!head) return
+  let el = document.querySelector(`meta[property="${property}"]`)
+  if (!el) {
+    el = document.createElement('meta')
+    el.setAttribute('property', property)
+    head.appendChild(el)
+  }
+  el.setAttribute('content', content)
+}
+
+const setCanonical = (href) => {
+  const head = document.head
+  if (!head) return
+  let el = document.querySelector('link[rel="canonical"]')
+  if (!el) {
+    el = document.createElement('link')
+    el.setAttribute('rel', 'canonical')
+    head.appendChild(el)
+  }
+  el.setAttribute('href', href)
+}
+
+watchEffect(() => {
+  const hasShareToken = !!shareToken.value
+
+  const title = hasShareToken ? `分享 - ${DEFAULT_TITLE}` : DEFAULT_TITLE
+  const description = hasShareToken ? 'Panda 知识库文件分享预览。' : DEFAULT_DESCRIPTION
+  const robots = hasShareToken ? 'noindex,nofollow' : 'index,follow'
+
+  document.title = title
+  setMetaByName('description', description)
+  setMetaByName('robots', robots)
+  setCanonical(BASE_SITE_URL)
+  setMetaByProperty('og:title', title)
+  setMetaByProperty('og:description', description)
+  setMetaByProperty('og:url', BASE_SITE_URL)
+  setMetaByName('twitter:title', title)
+  setMetaByName('twitter:description', description)
+})
 
 const initAuth = async () => {
   const url = new URL(window.location.href)
