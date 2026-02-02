@@ -2,8 +2,14 @@ import axios from 'axios'
 import { useUserStore } from '../stores/user'
 import { ElMessage } from 'element-plus'
 
+const resolveApiBaseUrl = () => {
+  const hostname = window.location.hostname
+  if (hostname === 'tongzhilian.cn' || hostname === 'www.tongzhilian.cn') return 'https://api.tongzhilian.cn'
+  return '/'
+}
+
 const service = axios.create({
-  baseURL: '/', // 使用代理
+  baseURL: resolveApiBaseUrl(),
   withCredentials: true,
   timeout: 60000 // 请求超时时间
 })

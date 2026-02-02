@@ -40,7 +40,10 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - /opt/panda/tongzhilian.cn_nginx:/etc/nginx/ssl:ro
+      - /opt/panda/tongzhilian.cn_nginx/tongzhilian.cn.pem:/etc/nginx/ssl/tongzhilian.cn.pem:ro
+      - /opt/panda/tongzhilian.cn_nginx/tongzhilian.cn.key:/etc/nginx/ssl/tongzhilian.cn.key:ro
+      - /opt/panda/api.tongzhilian.cn_nginx/api.tongzhilian.cn.pem:/etc/nginx/ssl/api.tongzhilian.cn.pem:ro
+      - /opt/panda/api.tongzhilian.cn_nginx/api.tongzhilian.cn.key:/etc/nginx/ssl/api.tongzhilian.cn.key:ro
     depends_on:
       - app
     restart: always
