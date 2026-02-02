@@ -167,9 +167,15 @@ public class DocumentService {
         if (isTextFile(extension)) {
              text = Files.readString(processFile.toPath());
         } else if (isOfficeFile(extension)) {
-            // Office 文件 -> 百度 OCR (返回 JSON)
-            ocrJson = ocrService.recognizeOfficeDocJson(processFile);
-            text = parseTextFromJson(ocrJson);
+            try {
+                ocrJson = ocrService.recognizeOfficeDocJson(processFile);
+                text = parseTextFromJson(ocrJson);
+            } catch (Exception e) {
+                text = extractOfficeText(processFile);
+                if (text != null && !text.isBlank()) {
+                    ocrJson = wrapPlainTextAsPagesJson(text);
+                }
+            }
         } else if ("pdf".equals(extension)) {
             // PDF -> 多页 OCR 处理
             PdfResult result = processPdfWithOcr(processFile);
@@ -191,6 +197,31 @@ public class DocumentService {
         }
 
         return text;
+    }
+
+    private String extractOfficeText(File file) throws Exception {
+        POITextExtractor extractor = ExtractorFactory.createExtractor(file);
+        try {
+            String text = extractor.getText();
+            return text == null ? "" : text;
+        } finally {
+            extractor.close();
+        }
+    }
+
+    private String wrapPlainTextAsPagesJson(String text) {
+        JSONObject root = new JSONObject();
+        JSONArray pages = new JSONArray();
+        JSONObject page = new JSONObject();
+        JSONArray boxes = new JSONArray();
+        JSONObject box = new JSONObject();
+        box.put("text", text);
+        boxes.put(box);
+        page.put("boxes", boxes);
+        pages.put(page);
+        root.put("pages", pages);
+        root.put("total_pages", pages.length());
+        return root.toString();
     }
 
     private boolean isOfficeFile(String ext) {
@@ -293,6 +324,21 @@ public class DocumentService {
                         pagesJson.put(errorJson);
                     } finally {
                         Files.deleteIfExists(tempPdf.toPath());
+                    }
+                }
+            }
+
+            if (fullText.toString().isBlank()) {
+                PDFTextStripper stripper = new PDFTextStripper();
+                String extracted = stripper.getText(document);
+                if (extracted != null && !extracted.isBlank()) {
+                    fullText.append(extracted);
+                    if (pagesJson.isEmpty()) {
+                        JSONObject page = new JSONObject();
+                        JSONArray boxes = new JSONArray();
+                        boxes.put(new JSONObject().put("text", extracted));
+                        page.put("boxes", boxes);
+                        pagesJson.put(page);
                     }
                 }
             }
