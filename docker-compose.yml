@@ -63,6 +63,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-panda-2026-xd}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Zxd123456789.}
+      MINIO_SERVER_URL: ${MINIO_PUBLIC_ENDPOINT:-https://api.tongzhilian.cn}
     volumes:
       - ./data/minio:/data
     command: server /data --console-address ":9001"
