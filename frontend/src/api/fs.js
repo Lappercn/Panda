@@ -80,7 +80,8 @@ const isProductionDomain = () => {
 export async function uploadFile(parentId, file) {
   const pid = parentId || '0'
 
-  if (isProductionDomain()) {
+  // 强制关闭直传，使用后端代理上传以确保跨国网络下的稳定性
+  if (false && isProductionDomain()) {
     try {
       const presignRes = await request({
         url: '/api/fs/presign-upload',
