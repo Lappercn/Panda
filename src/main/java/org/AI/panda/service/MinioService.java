@@ -144,4 +144,39 @@ public class MinioService {
             throw new RuntimeException("MinIO Get URL Failed: " + msg, e);
         }
     }
+
+    public String getPresignedPutUrl(String objectName, int expirySeconds) {
+        ensureBucketExists();
+        try {
+            return minioPresignClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .method(Method.PUT)
+                            .bucket(bucketName)
+                            .object(objectName)
+                            .expiry(expirySeconds, TimeUnit.SECONDS)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.error("MinIO presign put failed, bucket={}, objectName={}, expirySeconds={}", bucketName, objectName, expirySeconds, e);
+            String msg = e.getMessage();
+            if (msg == null || msg.isBlank()) {
+                throw new RuntimeException("MinIO Put URL Failed", e);
+            }
+            throw new RuntimeException("MinIO Put URL Failed: " + msg, e);
+        }
+    }
+
+    public StatObjectResponse statObject(String objectName) {
+        ensureBucketExists();
+        try {
+            return minioClient.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectName)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("MinIO Stat Object Failed", e);
+        }
+    }
 }

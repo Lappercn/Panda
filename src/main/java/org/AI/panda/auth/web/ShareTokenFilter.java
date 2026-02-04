@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 
 @Component
@@ -41,10 +42,29 @@ public class ShareTokenFilter extends OncePerRequestFilter {
     }
 
     private String readShareToken(HttpServletRequest request) {
-        String token = request.getParameter("shareToken");
+        String token = request.getHeader("X-Share-Token");
         if (token != null && !token.isBlank()) return token;
-        token = request.getHeader("X-Share-Token");
-        if (token != null && !token.isBlank()) return token;
+        return readQueryParam(request, "shareToken");
+    }
+
+    private String readQueryParam(HttpServletRequest request, String name) {
+        String qs = request == null ? null : request.getQueryString();
+        if (qs == null || qs.isBlank() || name == null || name.isBlank()) return null;
+        String[] parts = qs.split("&");
+        for (String part : parts) {
+            if (part == null || part.isBlank()) continue;
+            int idx = part.indexOf('=');
+            String k = idx >= 0 ? part.substring(0, idx) : part;
+            if (!name.equals(k)) continue;
+            String v = idx >= 0 ? part.substring(idx + 1) : "";
+            if (v.isBlank()) return null;
+            try {
+                String decoded = URLDecoder.decode(v, StandardCharsets.UTF_8);
+                return decoded == null || decoded.isBlank() ? null : decoded;
+            } catch (Exception ignored) {
+                return v;
+            }
+        }
         return null;
     }
 

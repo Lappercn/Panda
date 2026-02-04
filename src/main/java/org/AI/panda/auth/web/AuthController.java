@@ -64,7 +64,7 @@ public class AuthController {
                 req.email(),
                 req.password(),
                 req.code(),
-                request.getRemoteAddr(),
+                resolveClientIp(request),
                 request.getHeader("User-Agent")
         );
         setSessionCookie(response, result.sessionToken());
@@ -81,7 +81,7 @@ public class AuthController {
         AuthService.AuthResult result = authService.loginWithPassword(
                 req.email(),
                 req.password(),
-                request.getRemoteAddr(),
+                resolveClientIp(request),
                 request.getHeader("User-Agent")
         );
         setSessionCookie(response, result.sessionToken());
@@ -98,7 +98,7 @@ public class AuthController {
         AuthService.AuthResult result = authService.loginWithCode(
                 req.email(),
                 req.code(),
-                request.getRemoteAddr(),
+                resolveClientIp(request),
                 request.getHeader("User-Agent")
         );
         setSessionCookie(response, result.sessionToken());
@@ -174,5 +174,53 @@ public class AuthController {
             }
         }
         return null;
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        if (request == null) return null;
+
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            String[] parts = xff.split(",");
+            for (String part : parts) {
+                String ip = part == null ? "" : part.trim();
+                if (!ip.isBlank() && !"unknown".equalsIgnoreCase(ip)) {
+                    return ip;
+                }
+            }
+        }
+
+        String xri = request.getHeader("X-Real-IP");
+        if (xri != null && !xri.isBlank() && !"unknown".equalsIgnoreCase(xri.trim())) {
+            return xri.trim();
+        }
+
+        String forwarded = request.getHeader("Forwarded");
+        if (forwarded != null && !forwarded.isBlank()) {
+            String[] items = forwarded.split(";");
+            for (String item : items) {
+                String kv = item.trim();
+                if (kv.regionMatches(true, 0, "for=", 0, 4)) {
+                    String v = kv.substring(4).trim();
+                    if (v.startsWith("\"") && v.endsWith("\"") && v.length() >= 2) {
+                        v = v.substring(1, v.length() - 1);
+                    }
+                    int commaIdx = v.indexOf(',');
+                    if (commaIdx >= 0) v = v.substring(0, commaIdx).trim();
+                    if (v.startsWith("[")) {
+                        int end = v.indexOf(']');
+                        if (end > 1) v = v.substring(1, end);
+                    } else {
+                        int colonIdx = v.indexOf(':');
+                        if (colonIdx > 0) v = v.substring(0, colonIdx);
+                    }
+                    if (!v.isBlank() && !"unknown".equalsIgnoreCase(v)) {
+                        return v;
+                    }
+                }
+            }
+        }
+
+        return request.getRemoteAddr();
     }
 }

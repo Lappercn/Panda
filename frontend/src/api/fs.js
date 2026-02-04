@@ -72,20 +72,51 @@ export function retryProcess(nodeId) {
   })
 }
 
-// 文件上传通常需要特殊处理 Content-Type，request 拦截器通常能自动处理 FormData
-export function uploadFile(parentId, file) {
+const isProductionDomain = () => {
+  const hostname = window.location.hostname
+  return hostname === 'tongzhilian.cn' || hostname === 'www.tongzhilian.cn'
+}
+
+export async function uploadFile(parentId, file) {
+  const pid = parentId || '0'
+
+  if (isProductionDomain()) {
+    try {
+      const presignRes = await request({
+        url: '/api/fs/presign-upload',
+        method: 'post',
+        data: { parentId: pid, fileName: file?.name }
+      })
+
+      const uploadUrl = presignRes?.data?.uploadUrl
+      const objectName = presignRes?.data?.objectName
+      if (uploadUrl && objectName) {
+        const headers = {}
+        if (file?.type) headers['Content-Type'] = file.type
+
+        const putRes = await fetch(uploadUrl, { method: 'PUT', body: file, headers })
+        if (!putRes.ok) throw new Error('direct upload failed')
+
+        return request({
+          url: '/api/fs/commit-upload',
+          method: 'post',
+          data: { parentId: pid, fileName: file?.name, objectName }
+        })
+      }
+    } catch (_) {
+    }
+  }
+
   const formData = new FormData()
   formData.append('file', file)
-  if (parentId) {
-    formData.append('parentId', parentId)
+  if (pid) {
+    formData.append('parentId', pid)
   }
-  
+
   return request({
     url: '/api/fs/upload',
     method: 'post',
     data: formData,
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    timeout: 10 * 60 * 1000
   })
 }
