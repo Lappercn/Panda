@@ -36,6 +36,7 @@ public class MinioConfig {
         String presignEndpoint = normalizeEndpoint((publicEndpoint == null || publicEndpoint.isBlank()) ? endpoint : publicEndpoint);
         return MinioClient.builder()
                 .endpoint(presignEndpoint)
+                .region("us-east-1")
                 .credentials(accessKey, secretKey)
                 .build();
     }
