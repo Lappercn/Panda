@@ -52,6 +52,28 @@ public class FileSystemController {
         return Result.success(fileSystemService.uploadFile(UserIdResolver.resolve(request, userId), parentId, file));
     }
 
+    @PostMapping("/presign-upload")
+    public Result<FileSystemService.PresignedUploadInfo> presignUpload(@RequestHeader(value = "X-User-ID", required = false) String userId,
+                                                                       HttpServletRequest request,
+                                                                       @RequestBody PresignUploadRequest body) {
+        if (UserIdResolver.isVisitor(request)) {
+            return Result.error(403, "只读分享链接禁止该操作");
+        }
+        String uid = UserIdResolver.resolve(request, userId);
+        return Result.success(fileSystemService.createPresignedUpload(uid, body.getParentId(), body.getFileName()));
+    }
+
+    @PostMapping("/commit-upload")
+    public Result<FileSystemNode> commitUpload(@RequestHeader(value = "X-User-ID", required = false) String userId,
+                                               HttpServletRequest request,
+                                               @RequestBody CommitUploadRequest body) {
+        if (UserIdResolver.isVisitor(request)) {
+            return Result.error(403, "只读分享链接禁止该操作");
+        }
+        String uid = UserIdResolver.resolve(request, userId);
+        return Result.success(fileSystemService.commitPresignedUpload(uid, body.getParentId(), body.getFileName(), body.getObjectName()));
+    }
+
     @DeleteMapping("/delete")
     public Result<Void> delete(@RequestHeader(value = "X-User-ID", required = false) String userId,
                                HttpServletRequest request,
@@ -93,6 +115,57 @@ public class FileSystemController {
         public void setNodeId(String nodeId) { this.nodeId = nodeId; }
         public String getJsonContent() { return jsonContent; }
         public void setJsonContent(String jsonContent) { this.jsonContent = jsonContent; }
+    }
+
+    public static class PresignUploadRequest {
+        private String parentId;
+        private String fileName;
+
+        public String getParentId() {
+            return parentId;
+        }
+
+        public void setParentId(String parentId) {
+            this.parentId = parentId;
+        }
+
+        public String getFileName() {
+            return fileName;
+        }
+
+        public void setFileName(String fileName) {
+            this.fileName = fileName;
+        }
+    }
+
+    public static class CommitUploadRequest {
+        private String parentId;
+        private String fileName;
+        private String objectName;
+
+        public String getParentId() {
+            return parentId;
+        }
+
+        public void setParentId(String parentId) {
+            this.parentId = parentId;
+        }
+
+        public String getFileName() {
+            return fileName;
+        }
+
+        public void setFileName(String fileName) {
+            this.fileName = fileName;
+        }
+
+        public String getObjectName() {
+            return objectName;
+        }
+
+        public void setObjectName(String objectName) {
+            this.objectName = objectName;
+        }
     }
 
     @GetMapping("/download")

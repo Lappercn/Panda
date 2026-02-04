@@ -85,3 +85,12 @@ panda:
       ttl-minutes: 10
       min-send-interval-seconds: 60
       max-per-hour: 5
+
+server:
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:native}
+  tomcat:
+    remoteip:
+      remote-ip-header: x-forwarded-for
+      protocol-header: x-forwarded-proto
+      port-header: x-forwarded-port
+      internal-proxies: '${SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES:127\\.0\\.0\\.1|10\\..*|192\\.168\\..*|172\\.(1[6-9]|2\\d|3[0-1])\\..*|198\\.44\\.176\\.167}'

@@ -1,5 +1,6 @@
 package org.AI.panda.service;
 
+import io.minio.StatObjectResponse;
 import org.AI.panda.model.entity.FileSystemNode;
 import org.AI.panda.repository.FileSystemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,16 +81,8 @@ public class FileSystemService {
             throw new IllegalArgumentException("File name cannot be null");
         }
 
-        // Validate file extension
-        String extension = "";
-        int dotIndex = fileName.lastIndexOf(".");
-        if (dotIndex >= 0) {
-            extension = fileName.substring(dotIndex + 1).toLowerCase();
-        }
-
-        if (!SUPPORTED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("不支持的文件类型: " + extension + "。仅支持 PDF, Word, Excel, PPT, OFD 及常见图片格式。");
-        }
+        validateFileName(fileName);
+        validateSupportedExtension(fileName);
 
         // 检查重名 (覆盖还是报错？通常文件系统允许覆盖或重命名。这里先报错)
         if (fsRepository.findByUserIdAndParentIdAndName(userId, pid, fileName).isPresent()) {
@@ -122,6 +115,108 @@ public class FileSystemService {
         documentService.processFileSystemNode(savedNode.getId());
         
         return savedNode;
+    }
+
+    public static class PresignedUploadInfo {
+        private final String uploadUrl;
+        private final String objectName;
+        private final int expiresInSeconds;
+
+        public PresignedUploadInfo(String uploadUrl, String objectName, int expiresInSeconds) {
+            this.uploadUrl = uploadUrl;
+            this.objectName = objectName;
+            this.expiresInSeconds = expiresInSeconds;
+        }
+
+        public String getUploadUrl() {
+            return uploadUrl;
+        }
+
+        public String getObjectName() {
+            return objectName;
+        }
+
+        public int getExpiresInSeconds() {
+            return expiresInSeconds;
+        }
+    }
+
+    public PresignedUploadInfo createPresignedUpload(String userId, String parentId, String fileName) {
+        String pid = (parentId == null || parentId.isEmpty()) ? "0" : parentId;
+        validateFileName(fileName);
+        validateSupportedExtension(fileName);
+
+        if (fsRepository.findByUserIdAndParentIdAndName(userId, pid, fileName).isPresent()) {
+            throw new IllegalArgumentException("File already exists: " + fileName);
+        }
+
+        int expiresInSeconds = 3600;
+        String objectName = userId + "/" + UUID.randomUUID() + "/" + fileName;
+        String uploadUrl = minioService.getPresignedPutUrl(objectName, expiresInSeconds);
+
+        return new PresignedUploadInfo(uploadUrl, objectName, expiresInSeconds);
+    }
+
+    public FileSystemNode commitPresignedUpload(String userId, String parentId, String fileName, String objectName) {
+        String pid = (parentId == null || parentId.isEmpty()) ? "0" : parentId;
+        validateFileName(fileName);
+        validateSupportedExtension(fileName);
+
+        if (objectName == null || objectName.isBlank()) {
+            throw new IllegalArgumentException("Object name cannot be null");
+        }
+        String expectedPrefix = userId + "/";
+        if (!objectName.startsWith(expectedPrefix) || !objectName.endsWith("/" + fileName)) {
+            throw new SecurityException("Access denied");
+        }
+
+        if (fsRepository.findByUserIdAndParentIdAndName(userId, pid, fileName).isPresent()) {
+            throw new IllegalArgumentException("File already exists: " + fileName);
+        }
+
+        StatObjectResponse stat = minioService.statObject(objectName);
+        long size = stat.size();
+        String contentType = stat.contentType();
+        if (contentType == null || contentType.isBlank()) {
+            contentType = "application/octet-stream";
+        }
+
+        FileSystemNode node = new FileSystemNode();
+        node.setUserId(userId);
+        node.setParentId(pid);
+        node.setName(fileName);
+        node.setType(FileSystemNode.NodeType.FILE);
+        node.setMinioObjectName(objectName);
+        node.setSize(size);
+        node.setContentType(contentType);
+        node.setCreatedAt(LocalDateTime.now());
+        node.setUpdatedAt(LocalDateTime.now());
+        node.setVectorized(false);
+        node.setProcessingStatus(FileSystemNode.ProcessingStatus.PENDING);
+
+        FileSystemNode savedNode = fsRepository.save(node);
+        documentService.processFileSystemNode(savedNode.getId());
+        return savedNode;
+    }
+
+    private void validateFileName(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            throw new IllegalArgumentException("File name cannot be null");
+        }
+        if (fileName.contains("/") || fileName.contains("\\") || fileName.contains("\0")) {
+            throw new IllegalArgumentException("Invalid file name");
+        }
+    }
+
+    private void validateSupportedExtension(String fileName) {
+        String extension = "";
+        int dotIndex = fileName.lastIndexOf(".");
+        if (dotIndex >= 0) {
+            extension = fileName.substring(dotIndex + 1).toLowerCase();
+        }
+        if (!SUPPORTED_EXTENSIONS.contains(extension)) {
+            throw new IllegalArgumentException("不支持的文件类型: " + extension + "。仅支持 PDF, Word, Excel, PPT, OFD 及常见图片格式。");
+        }
     }
 
     /**
